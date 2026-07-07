@@ -60,18 +60,13 @@ pipeline {
         }
 
         stage('Cleanup') {
-            steps {
-                echo 'Tearing down active application container...'
-                sh "docker rm -f ${CONTAINER_NAME} || true"
-                
-                echo 'Removing unused dangling images from host environment...'
-                sh 'docker image prune -f'
-                
-                echo 'Wiping Jenkins workspace directory clear...'
-                cleanWs()
-            }
-        }
+    steps {
+        echo 'Skipping container teardown to allow live verification...'
+        // sh "docker rm -f ${CONTAINER_NAME} || true" <--- Comment this out!
+        sh 'docker image prune -f'
+        cleanWs()
     }
+}
 
     post {
         always {
