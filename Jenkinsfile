@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         APP_NAME     = 'task-tracker-app'
+        CONTAINER_NAME = 'task_tracker_container'
         APP_PORT     = '3000'
         BASE_URL     = "http://localhost:${APP_PORT}"
         IMAGE_TAG    = "latest"
@@ -30,11 +31,13 @@ pipeline {
             }
         }
 
-        // Updated Stage: Uses the hyphenated legacy binary to match your EC2 engine's setup
+        // Updated Stage: Uses direct docker run to avoid docker-compose missing tool path issues
         stage('Deploy') {
             steps {
-                echo 'Launching application services via legacy Docker Compose engine...'
-                sh 'docker-compose up -d'
+                echo 'Launching application service container...'
+                // Removes old container instance if left over from prior failed runs
+                sh "docker rm -f ${CONTAINER_NAME} || true"
+                sh "docker run -d --name ${CONTAINER_NAME} -p ${APP_PORT}:${APP_PORT} -e NODE_ENV=production ${APP_NAME}:${IMAGE_TAG}"
                 
                 echo 'Allowing service initialization sync runtime buffer...'
                 sleep 7
@@ -43,7 +46,7 @@ pipeline {
 
         stage('Curl') {
             steps {
-                echo "Sending verification curl request to assignment targets..."
+                echo "Sending verification curl requests to assignment targets..."
                 
                 echo "--- Endpoint 1: Root Dashboard Page ---"
                 sh "curl -s -i ${BASE_URL}/"
@@ -58,8 +61,8 @@ pipeline {
 
         stage('Cleanup') {
             steps {
-                echo 'Tearing down active Docker Compose deployment containers...'
-                sh 'docker-compose down'
+                echo 'Tearing down active application container...'
+                sh "docker rm -f ${CONTAINER_NAME} || true"
                 
                 echo 'Removing unused dangling images from host environment...'
                 sh 'docker image prune -f'
