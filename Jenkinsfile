@@ -1,7 +1,6 @@
 pipeline {
     agent any
 
-    // Requirement: Usage of the environment block to define variables
     environment {
         APP_NAME     = 'task-tracker-app'
         APP_PORT     = '3000'
@@ -10,7 +9,6 @@ pipeline {
     }
 
     stages {
-        // Stage 1: SCM Pull - Checkout the code from your repository
         stage('SCM Pull') {
             steps {
                 echo 'Pulling application source code from SCM repository...'
@@ -18,18 +16,14 @@ pipeline {
             }
         }
 
-        // Stage 2: Install Dependencies and Run Tests - Run npm install and npm test
+        // Optimized Stage: Uses Docker to run tests, eliminating the local host "npm: command not found" issue
         stage('Install Dependencies and Run Tests') {
             steps {
-                echo 'Installing development dependencies...'
-                sh 'npm install'
-                
-                echo 'Executing application test suites...'
-                sh 'npm test'
+                echo 'Running tests inside a containerized Node.js environment...'
+                sh 'docker run --rm -v "$(pwd)":/usr/src/app -w /usr/src/app node:20-alpine sh -c "npm install && npm test"'
             }
         }
 
-        // Stage 3: Build - Build the multi-stage Docker image
         stage('Build') {
             steps {
                 echo "Building secure multi-stage Docker image: ${APP_NAME}:${IMAGE_TAG}..."
@@ -37,18 +31,14 @@ pipeline {
             }
         }
 
-        // Stage 4: Deploy - Run the application using Docker Compose
         stage('Deploy') {
             steps {
                 echo 'Launching application services via Docker Compose...'
                 sh 'docker compose up -d'
-                
-                echo 'Giving the container a brief moment to initialize...'
                 sleep 5
             }
         }
 
-        // Stage 5: Curl - Verify the deployment by sending a curl request to the health endpoint
         stage('Curl') {
             steps {
                 echo "Sending verification curl request to: ${BASE_URL}/health"
@@ -60,7 +50,6 @@ pipeline {
             }
         }
 
-        // Stage 6: Cleanup - Tear down deployment, remove dangling images, and clean workspace
         stage('Cleanup') {
             steps {
                 echo 'Tearing down active Docker Compose deployment containers...'
