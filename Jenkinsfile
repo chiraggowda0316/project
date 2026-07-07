@@ -16,7 +16,6 @@ pipeline {
             }
         }
 
-        // Optimized Stage: Uses Docker to run tests, eliminating the local host "npm: command not found" issue
         stage('Install Dependencies and Run Tests') {
             steps {
                 echo 'Running tests inside a containerized Node.js environment...'
@@ -31,21 +30,28 @@ pipeline {
             }
         }
 
+        // Updated Stage: Uses the hyphenated legacy binary to match your EC2 engine's setup
         stage('Deploy') {
             steps {
-                echo 'Launching application services via Docker Compose...'
-                sh 'docker compose up -d'
-                sleep 5
+                echo 'Launching application services via legacy Docker Compose engine...'
+                sh 'docker-compose up -d'
+                
+                echo 'Allowing service initialization sync runtime buffer...'
+                sleep 7
             }
         }
 
         stage('Curl') {
             steps {
-                echo "Sending verification curl request to: ${BASE_URL}/health"
+                echo "Sending verification curl request to assignment targets..."
+                
+                echo "--- Endpoint 1: Root Dashboard Page ---"
+                sh "curl -s -i ${BASE_URL}/"
+                
+                echo "--- Endpoint 2: Health Object Summary Status ---"
                 sh "curl -s -i ${BASE_URL}/health"
                 
-                echo "Verifying other required assignment endpoints..."
-                sh "curl -s -i ${BASE_URL}/"
+                echo "--- Endpoint 3: Tasks Collection Payload Arrays ---"
                 sh "curl -s -i ${BASE_URL}/api/tasks"
             }
         }
@@ -53,7 +59,7 @@ pipeline {
         stage('Cleanup') {
             steps {
                 echo 'Tearing down active Docker Compose deployment containers...'
-                sh 'docker compose down'
+                sh 'docker-compose down'
                 
                 echo 'Removing unused dangling images from host environment...'
                 sh 'docker image prune -f'
@@ -66,7 +72,7 @@ pipeline {
 
     post {
         always {
-            echo 'Pipeline execution execution loop completed.'
+            echo 'Pipeline execution run finalized.'
         }
     }
 }
