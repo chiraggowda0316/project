@@ -2,11 +2,11 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME     = 'task-tracker-app'
+        APP_NAME       = 'task-tracker-app'
         CONTAINER_NAME = 'task_tracker_container'
-        APP_PORT     = '3000'
-        BASE_URL     = "http://localhost:${APP_PORT}"
-        IMAGE_TAG    = "latest"
+        APP_PORT       = '3000'
+        BASE_URL       = "http://localhost:${APP_PORT}"
+        IMAGE_TAG      = "latest"
     }
 
     stages {
@@ -31,14 +31,11 @@ pipeline {
             }
         }
 
-        // Updated Stage: Uses direct docker run to avoid docker-compose missing tool path issues
         stage('Deploy') {
             steps {
                 echo 'Launching application service container...'
-                // Removes old container instance if left over from prior failed runs
                 sh "docker rm -f ${CONTAINER_NAME} || true"
                 sh "docker run -d --name ${CONTAINER_NAME} -p ${APP_PORT}:${APP_PORT} -e NODE_ENV=production ${APP_NAME}:${IMAGE_TAG}"
-                
                 echo 'Allowing service initialization sync runtime buffer...'
                 sleep 7
             }
@@ -47,26 +44,26 @@ pipeline {
         stage('Curl') {
             steps {
                 echo "Sending verification curl requests to assignment targets..."
-                
                 echo "--- Endpoint 1: Root Dashboard Page ---"
                 sh "curl -s -i ${BASE_URL}/"
-                
                 echo "--- Endpoint 2: Health Object Summary Status ---"
                 sh "curl -s -i ${BASE_URL}/health"
-                
                 echo "--- Endpoint 3: Tasks Collection Payload Arrays ---"
                 sh "curl -s -i ${BASE_URL}/api/tasks"
             }
         }
 
         stage('Cleanup') {
-    steps {
-        echo 'Skipping container teardown to allow live verification...'
-        // sh "docker rm -f ${CONTAINER_NAME} || true" <--- Comment this out!
-        sh 'docker image prune -f'
-        cleanWs()
+            steps {
+                echo 'Skipping container removal so endpoint stays online for evaluation...'
+                // sh "docker rm -f ${CONTAINER_NAME} || true"
+                echo 'Removing unused dangling images from host environment...'
+                sh 'docker image prune -f'
+                echo 'Wiping Jenkins workspace directory clear...'
+                cleanWs()
+            }
+        }
     }
-}
 
     post {
         always {
